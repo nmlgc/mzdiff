@@ -11,6 +11,10 @@ from struct import unpack
 parser = ArgumentParser(description=__doc__)
 parser.add_argument('file1', help='Original file')
 parser.add_argument('file2', help='Modified file')
+parser.add_argument(
+	'-c', '--color', action='store_true',
+	help='Enable colored output',
+)
 
 MZHeader = namedtuple('MZHeader', [
 	'magic',
@@ -144,7 +148,7 @@ def mz_read(fn):
 		)
 
 
-def mz_diff(files):
+def mz_diff(files, color=True):
 	mzs = [mz_read(fn) for fn in files]
 	ret = deque(
 		section_diff(mz_header_diff, 'mz_header', 'MZ header', mzs)
@@ -154,11 +158,23 @@ def mz_diff(files):
 		+ section_diff(binary_diff, 'prog', 'Program image', mzs)
 	)
 	if len(ret):
-		ret.appendleft('--- {}\n+++ {}\n'.format(*files))
-	print('\n'.join(ret), end='')
+		ret.appendleft('+++ ' + files[1] + '\n')
+		ret.appendleft('--- ' + files[0])
+		ret.pop() # remove final newline
+	if color:
+		from colorama import init, Fore, Style
+		init()
+		for i in ret:
+			if len(i) and i[0] == '-':
+				print(Fore.RED + Style.BRIGHT, end='')
+			elif len(i) and i[0] == '+':
+				print(Fore.GREEN + Style.BRIGHT, end='')
+			print(i + Style.RESET_ALL)
+	elif len(ret):
+		print('\n'.join(ret))
 	return len(ret) != 0
 
 
 if __name__ == '__main__':
 	arg = parser.parse_args()
-	sys.exit(mz_diff((arg.file1, arg.file2)))
+	sys.exit(mz_diff((arg.file1, arg.file2), arg.color))
