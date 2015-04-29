@@ -45,10 +45,17 @@ def read_to(file, pos):
 
 def hexdump(bytes, offset=0):
 	BYTES_PER_LINE = 16
-	ret = []
-	for i in range(0, len(bytes), BYTES_PER_LINE):
-		line = ''.join(' %02X' % by for by in bytes[i:i + BYTES_PER_LINE])
-		ret.append('%05X ' % (i + offset) + line)
+
+	def fmt_line(bytepos, line):
+		return '%05X ' % (bytepos) + line
+
+	if len(bytes) > BYTES_PER_LINE and bytes.count(0) == len(bytes):
+		return [fmt_line(offset, ' (%Xh bytes of zero padding)' % len(bytes))]
+	else:
+		ret = []
+		for i in range(0, len(bytes), BYTES_PER_LINE):
+			line = ''.join(' %02X' % by for by in bytes[i:i + BYTES_PER_LINE])
+			ret.append(fmt_line(i + offset, line))
 	return ret
 
 
